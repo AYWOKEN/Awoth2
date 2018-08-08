@@ -73,28 +73,10 @@ app.post('/recup_mdp', function (req, res, next) {
         port: 25,
         transportMethod: 'SMTP',
         auth: {
-            user: 'my email',
-            pass: 'the pass of my mail'
+            user: 'mon email.com',
+            pass: 'mon mdp'
         }
-
     });
-
-    app.mailer.send('mdprecup', {
-        to: req.body.user_mail,
-        from: "monsitedemalade",
-        subject: "Récupération du mot de passe",
-        message: req.body.pass
-    }, function (err) {
-        if (err) {
-            console.log('We have an error !');
-            console.log(err)
-            return;
-            res.render('echec')
-        }
-        res.send('Email envoyé', { name: req.body.pass });
-    });
-
-
 })
 
 
