@@ -1,20 +1,20 @@
-const express = require('express')
-const app = express()
-const swig = require('swig')
-const mailer = require('express-mailer')
-const path = require('path')
+const express = require('express');
+const app = express();
+const swig = require('swig');
+const mailer = require('express-mailer');
+const path = require('path');
 const bodyParser = require('body-parser');
-const fs = require('fs')
-const ejs = require('ejs')
+const fs = require('fs');
+const ejs = require('ejs');
 const {
     promisify
-} = require('util')
-const argon2 = require('argon2')
+} = require('util');
+const argon2 = require('argon2');
 
-const writeFile = promisify(fs.writeFile)
-const readFile = promisify(fs.readFile)
+const writeFile = promisify(fs.writeFile);
+const readFile = promisify(fs.readFile);
 
-app.set('view engine', 'ejs')
+app.set('view engine', 'ejs');
 app.use(express.static('public'));
 app.use(bodyParser.urlencoded({
     extended: false
@@ -50,7 +50,7 @@ app.get('/login', function (req, res) {
 
 app.post('/login', async (req, res) => {
     try {
-        const data = await readFile(req.body.user_pseudo + ".json")
+        const data = await readFile(req.body.user_pseudo + ".json");
         const user = JSON.parse(data)
         if (await argon2.verify(user.pass, req.body.pass)) {
             res.render('login_success')
@@ -67,16 +67,37 @@ app.get('/recup_mdp', function (req, res) {
 })
 
 app.post('/recup_mdp', function (req, res, next) {
+
     mailer.extend(app, {
+        form: "",
         host: 'smtp.gmail.com',
-        secureConnection: false,
+        secureConnection: true,
         port: 25,
         transportMethod: 'SMTP',
         auth: {
-            user: 'mon email.com',
-            pass: 'mon mdp'
+            user: '',
+            pass: ''
         }
     });
+
+    var mailOptions = {
+        to: req.body.user_mail,
+        subject: 'Reset password',
+        user: {
+            password: '123456',
+        }
+    }
+
+    // Send email.
+    app.mailer.send('mail_reset_password', mailOptions, function (err) {
+        if (err) {
+            console.log(err);
+            res.send('There was an error sending the email');
+            return;
+        }
+        return res.send('Email has been sent!');
+    });
+
 })
 
 
