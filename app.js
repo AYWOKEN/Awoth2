@@ -1,20 +1,22 @@
-const express = require('express');
-const app = express();
-const swig = require('swig');
-const mailer = require('express-mailer');
-const path = require('path');
+const express = require('express')
+const app = express()
+const swig = require('swig')
+const mailer = require('express-mailer')
+const path = require('path')
 const bodyParser = require('body-parser');
-const fs = require('fs');
-const ejs = require('ejs');
+const fs = require('fs')
+const ejs = require('ejs')
+const crypto = require('crypto')
 const {
     promisify
-} = require('util');
-const argon2 = require('argon2');
+} = require('util')
+const argon2 = require('argon2')
 
-const writeFile = promisify(fs.writeFile);
-const readFile = promisify(fs.readFile);
+const writeFile = promisify(fs.writeFile)
+const readFile = promisify(fs.readFile)
+const appendFile = promisify(fs.appendFile)
 
-app.set('view engine', 'ejs');
+app.set('view engine', 'ejs')
 app.use(express.static('public'));
 app.use(bodyParser.urlencoded({
     extended: false
@@ -38,8 +40,6 @@ app.post('/inscription', async (req, res) => {
         pass: await argon2.hash(req.body.pass)
     }, false, 4))
 
-
-
     res.render('inscription_success')
 })
 
@@ -50,7 +50,7 @@ app.get('/login', function (req, res) {
 
 app.post('/login', async (req, res) => {
     try {
-        const data = await readFile(req.body.user_pseudo + ".json");
+        const data = await readFile(req.body.user_pseudo + ".json")
         const user = JSON.parse(data)
         if (await argon2.verify(user.pass, req.body.pass)) {
             res.render('login_success')
@@ -62,44 +62,72 @@ app.post('/login', async (req, res) => {
     }
 })
 
-app.get('/recup_mdp', function (req, res) {
+app.get('/recup_mdp', function (req, res, next) {
     res.render('recup_mdp')
 })
 
-app.post('/recup_mdp', function (req, res, next) {
+app.post('/recup_mdp', async function (req, res, next) {
 
     mailer.extend(app, {
-        form: "",
         host: 'smtp.gmail.com',
-        secureConnection: true,
+        secureConnection: false,
         port: 25,
         transportMethod: 'SMTP',
         auth: {
-            user: '',
-            pass: ''
+            user: 'your email.com',
+            pass: 'the mdp of ur email'
         }
     });
 
-    var mailOptions = {
+    const token = crypto.randomBytes(16).toString("hex");
+    console.log(token);
+
+    let fileContent = await readFile(req.body.user_pseudo + ".json"); // 1re étape
+    const user = JSON.parse(fileContent); // 2ème étape
+    user.token = token                     // 3ème étape
+    console.log(user) // return obj
+    let stringUser = JSON.stringify(user, false, 4) // 4ème étape
+    await writeFile(req.body.user_pseudo + ".json", stringUser) // 5ème étape
+
+
+    let mailOptions = {
         to: req.body.user_mail,
         subject: 'Reset password',
         user: {
-            password: '123456',
+            token: token,
+            user_pseudo: req.body.user_pseudo
         }
     }
 
-    // Send email.
     app.mailer.send('mail_reset_password', mailOptions, function (err) {
         if (err) {
             console.log(err);
             res.send('There was an error sending the email');
             return;
         }
-        return res.send('Email has been sent!');
+        return res.send('Email de récupération de mot de passe envoyé!');
     });
+
+
 
 })
 
+
+app.get('/change_password/:pseudo/:id', async function (req, res) {
+    res.render("change_password")
+    console.log(req.params.id)
+
+    let fileContent = await readFile(req.params.pseudo + ".json");
+    const tokenVerify = JSON.parse(fileContent);
+    console.log(tokenVerify.token)
+
+
+    if (req.params.id = tokenVerify) {
+        console.log('NICKEL !!')
+    }
+
+
+})
 
 
 
