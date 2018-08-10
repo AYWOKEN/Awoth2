@@ -74,8 +74,8 @@ app.post('/recup_mdp', async function (req, res, next) {
         port: 25,
         transportMethod: 'SMTP',
         auth: {
-            user: 'your email.com',
-            pass: 'the mdp of ur email'
+            user: 'mon email.com',
+            pass: 'mon mdp'
         }
     });
 
@@ -114,21 +114,29 @@ app.post('/recup_mdp', async function (req, res, next) {
 
 
 app.get('/change_password/:pseudo/:id', async function (req, res) {
-    res.render("change_password")
-    console.log(req.params.id)
-
-    let fileContent = await readFile(req.params.pseudo + ".json");
-    const tokenVerify = JSON.parse(fileContent);
-    console.log(tokenVerify.token)
-
-
-    if (req.params.id = tokenVerify) {
-        console.log('NICKEL !!')
-    }
-
-
+    res.render("change_password", req.params)
 })
 
+app.post('/change_password', async function (req, res) {
+
+    let fileContent = await readFile(req.params.pseudo + ".json")
+    let user = JSON.parse(fileContent)
+    if (req.params.id === user.token) {
+        if (req.body.new_pass === req.body.confirm_pass) {
+            user.pass = await argon2.hash(req.body.confirm_pass)
+            user.token = undefined
+            let stringPass = JSON.stringify(user, false, 4)
+            await writeFile(req.params.pseudo + ".json", stringPass)
+            res.render('change_password_success', req.params)
+        }
+        else {
+            res.render('change_password_failed')
+        }
+    }
+    else {
+        res.render('change_password_failed')
+    }
+})
 
 
 app.listen(3000);
